@@ -187,7 +187,7 @@
                 <input type="date" id="currentDate" onchange="loadDayData()">
             </div>
             <button class="btn btn-gray" onclick="askPermission()">🔑 Дозволити доступ</button>
-            <button class="btn btn-test" onclick="sendTestNotification()">🧪 Тест (+Довгий сигнал)</button>
+            <button class="btn btn-test" onclick="sendTestNotification()">🧪 Тест (Мелодія "Сирена")</button>
             <button class="btn btn-orange" onclick="enableNotifications()">▶ Увімкнути щогодини</button>
             <button class="btn btn-red" onclick="disableNotifications()">⏹ Вимкнути все</button>
             <button class="btn btn-blue" onclick="setToday()" style="grid-column: span 2;">📅 Перейти на Сьогодні</button>
@@ -207,8 +207,7 @@
                         <th>Задоволення</th>
                     </tr>
                 </thead>
-                <tbody id="mainTableBody">
-                    </tbody>
+                <tbody id="mainTableBody"></tbody>
             </table>
         </div>
     </div>
@@ -273,29 +272,38 @@
         el.style.backgroundColor = `hsla(${v * 12}, 70%, 92%, 1)`;
     }
 
-    // --- ПОКРАЩЕНИЙ ЗВУК ТА ВІБРАЦІЯ ---
+    // --- ПОТУЖНА МЕЛОДІЯ "СИРЕНА" ТА ВІБРАЦІЯ ---
     function triggerAlert() {
-        if ("vibrate" in navigator) navigator.vibrate([300, 200, 300, 200, 500]);
+        // Довга вібрація
+        if ("vibrate" in navigator) navigator.vibrate([500, 300, 500, 300, 500, 300, 500, 300, 500]);
         
         try {
             const context = new (window.AudioContext || window.webkitAudioContext)();
-            const playTone = (time, duration) => {
+            const now = context.currentTime;
+
+            const playTone = (startTime, freq) => {
                 const osc = context.createOscillator();
                 const gain = context.createGain();
-                osc.connect(gain); gain.connect(context.destination);
-                osc.type = "sine"; 
-                osc.frequency.setValueAtTime(880, time); 
-                gain.gain.setValueAtTime(0.1, time);
-                gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
-                osc.start(time);
-                osc.stop(time + duration);
+                osc.connect(gain);
+                gain.connect(context.destination);
+                
+                osc.type = "sawtooth"; // Більш насичений, "гучний" тип хвилі
+                osc.frequency.setValueAtTime(freq, startTime);
+                
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.2, startTime + 0.1); // Гучність 20%
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.6);
+                
+                osc.start(startTime);
+                osc.stop(startTime + 0.7);
             };
 
-            // Три послідовні сигнали
-            const now = context.currentTime;
-            playTone(now, 1.0);
-            playTone(now + 1.2, 1.0);
-            playTone(now + 2.4, 1.0);
+            // Чергування низької та високої частоти (ефект сирени) протягом 5 секунд
+            for (let i = 0; i < 6; i++) {
+                const start = now + (i * 0.8);
+                const freq = (i % 2 === 0) ? 440 : 880; // Ля першої октави та Ля другої октави
+                playTone(start, freq);
+            }
         } catch(e) {}
     }
 
@@ -306,11 +314,14 @@
 
     function sendTestNotification() {
         if (Notification.permission !== 'granted') return alert("Спочатку дайте дозвіл");
-        alert("Зачекайте 5 сек. і згорніть браузер...");
+        alert("Мелодія почнеться через 3 сек. Згорніть браузер!");
         setTimeout(() => {
             triggerAlert();
-            new Notification("Тест моніторингу ✅", { body: "Довгий ритмічний сигнал спрацював!", icon: "https://cdn-icons-png.flaticon.com/512/3652/3652191.png" });
-        }, 5000);
+            new Notification("БЛАНК моніторингу активностей ✅", { 
+                body: "Час заповнити дані!", 
+                icon: "https://cdn-icons-png.flaticon.com/512/3652/3652191.png" 
+            });
+        }, 3000);
     }
 
     async function enableNotifications(isAuto = false) {
@@ -325,9 +336,13 @@
 
         timerId = setInterval(() => {
             const now = new Date();
+            // Спрацьовує з 8 ранку до 23 вечора на початку кожної години
             if(now.getHours() >= 8 && now.getHours() <= 23 && now.getMinutes() === 0) {
                 triggerAlert();
-                new Notification("Моніторинг активностей 📝", { body: "Час заповнити дані за минулу годину!" });
+                new Notification("Моніторинг активностей 📝", { 
+                    body: "Час заповнити дані за минулу годину!",
+                    requireInteraction: true // Сповіщення не зникне, поки ви не натиснете на нього
+                });
             }
         }, 60000);
 
@@ -361,12 +376,12 @@
             data.achievement[h] = document.getElementById(`ach_${h}`).value;
             data.satisfaction[h] = document.getElementById(`sat_${h}`).value;
         });
-        localStorage.setItem('kpt_v52_final_' + date, JSON.stringify(data));
+        localStorage.setItem('kpt_final_export_v5_' + date, JSON.stringify(data));
     }
 
     function loadDayData() {
         const date = document.getElementById('currentDate').value;
-        const saved = JSON.parse(localStorage.getItem('kpt_v52_final_' + date) || 'null');
+        const saved = JSON.parse(localStorage.getItem('kpt_final_export_v5_' + date) || 'null');
         hours.forEach(h => {
             document.getElementById(`act_${h}`).value = saved?.activities[h] || '';
             document.getElementById(`dep_${h}`).value = saved?.mood[h]?.d || '';
@@ -388,7 +403,7 @@
         const sections = [];
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             const dKey = d.toISOString().split('T')[0];
-            const raw = localStorage.getItem('kpt_v52_final_' + dKey);
+            const raw = localStorage.getItem('kpt_final_export_v5_' + dKey);
             if(!raw) continue;
             const data = JSON.parse(raw);
             const tableRows = [new docx.TableRow({ children: ["Час доби", "Активність", "Д/т", "досягнення", "задоволення"].map(h => new docx.TableCell({ children: [new docx.Paragraph({ text: h, bold: true, alignment: docx.AlignmentType.CENTER })], shading: { fill: "F2F2F2" } })) })];
@@ -406,5 +421,4 @@
     }
 </script>
 </body>
-
 </html>
