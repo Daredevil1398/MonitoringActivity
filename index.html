@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>БЛАНК моніторингу активностей FULL PRO 5.5</title>
+    <title>БЛАНК моніторингу активностей FULL PRO 5.6</title>
     
     <script src="https://cdn.jsdelivr.net/npm/docx@7.1.0/build/index.js"></script>
 
@@ -203,21 +203,7 @@
                     </tr>
                 </thead>
                 <tbody id="mainTableBody">
-                    <script>
-                        const hours = ["04.00-05.00", "05.00-06.00", "06.00-07.00", "07.00-08.00", "08.00-09.00", "09.00-10.00", "10.00-11.00", "11.00-12.00", "12.00-13.00", "13.00-14.00", "14.00-15.00", "15.00-16.00", "16.00-17.00", "17.00-18.00", "18.00-19.00", "19.00-20.00", "20.00-21.00", "21.00-22.00", "22.00-23.00", "23.00-24.00", "24.00-01.00", "01.00-02.00", "02.00-03.00", "03.00-04.00"];
-                        document.write(hours.map(h => `
-                            <tr>
-                                <td class="time-label">${h}</td>
-                                <td><textarea id="act_${h}" class="activity-box" oninput="saveCurrentData()"></textarea></td>
-                                <td><div class="dt-cell">
-                                    <input type="number" id="dep_${h}" class="num-input" placeholder="Д" oninput="saveCurrentData()">
-                                    <input type="number" id="anx_${h}" class="num-input" placeholder="Т" oninput="saveCurrentData()">
-                                </div></td>
-                                <td><input type="number" id="ach_${h}" class="num-input" oninput="saveCurrentData()" onchange="colorScore(this)"></td>
-                                <td><input type="number" id="sat_${h}" class="num-input" oninput="saveCurrentData()" onchange="colorScore(this)"></td>
-                            </tr>`).join(''));
-                    </script>
-                </tbody>
+                    </tbody>
             </table>
         </div>
     </div>
@@ -246,9 +232,52 @@
 </div>
 
 <script>
+    const hours = ["04.00-05.00", "05.00-06.00", "06.00-07.00", "07.00-08.00", "08.00-09.00", "09.00-10.00", "10.00-11.00", "11.00-12.00", "12.00-13.00", "13.00-14.00", "14.00-15.00", "15.00-16.00", "16.00-17.00", "17.00-18.00", "18.00-19.00", "19.00-20.00", "20.00-21.00", "21.00-22.00", "22.00-23.00", "23.00-24.00", "24.00-01.00", "01.00-02.00", "02.00-03.00", "03.00-04.00"];
     let timerId = null;
+    const STORAGE_KEY = 'kpt_v56_final_';
 
-    // ФУНКЦІЯ МЕЛОДІЇ "СИРЕНА" (3 довгих сигнали по 1 сек)
+    // ІНІЦІАЛІЗАЦІЯ - Тепер з виправленим порядком
+    window.onload = () => {
+        // 1. Встановлюємо дату
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('currentDate').value = today;
+        document.getElementById('exportFrom').value = today;
+        document.getElementById('exportTo').value = today;
+
+        // 2. Будуємо таблицю
+        renderTableRows();
+
+        // 3. ЗАВАНТАЖУЄМО ДАНІ ПЕРЕД ТИМ ЯК ВМИКАТИ ЗБЕРЕЖЕННЯ
+        loadDayData();
+
+        // 4. Перевіряємо сповіщення
+        if(localStorage.getItem('notifs_active') === 'true') {
+            enableNotifications();
+        }
+    };
+
+    function renderTableRows() {
+        const body = document.getElementById('mainTableBody');
+        body.innerHTML = hours.map(h => `
+            <tr>
+                <td class="time-label">${h}</td>
+                <td><textarea id="act_${h}" class="activity-box" oninput="saveCurrentData()"></textarea></td>
+                <td><div class="dt-cell">
+                    <input type="number" id="dep_${h}" class="num-input" placeholder="Д" oninput="saveCurrentData()">
+                    <input type="number" id="anx_${h}" class="num-input" placeholder="Т" oninput="saveCurrentData()">
+                </div></td>
+                <td><input type="number" id="ach_${h}" class="num-input" oninput="saveCurrentData()" onchange="colorScore(this)"></td>
+                <td><input type="number" id="sat_${h}" class="num-input" oninput="saveCurrentData()" onchange="colorScore(this)"></td>
+            </tr>`).join('');
+    }
+
+    function colorScore(el) {
+        const v = parseInt(el.value);
+        if(isNaN(v)) { el.style.backgroundColor = 'white'; return; }
+        el.style.backgroundColor = `hsla(${v * 12}, 70%, 92%, 1)`;
+    }
+
+    // --- ЗВУК "СИРЕНА" ---
     function triggerAlert() {
         if ("vibrate" in navigator) navigator.vibrate([1000, 500, 1000, 500, 1000]);
         try {
@@ -270,17 +299,11 @@
         } catch(e) {}
     }
 
-    function colorScore(el) {
-        const v = parseInt(el.value);
-        if(isNaN(v)) { el.style.backgroundColor = 'white'; return; }
-        el.style.backgroundColor = `hsla(${v * 12}, 70%, 92%, 1)`;
-    }
-
-    // ЗБЕРЕЖЕННЯ / ЗАВАНТАЖЕННЯ (ФІКСОВАНИЙ КЛЮЧ)
-    const STORAGE_KEY = 'kpt_v55_data_';
-
+    // --- ДАНІ (БЕЗ ВТРАТИ) ---
     function saveCurrentData() {
         const date = document.getElementById('currentDate').value;
+        if (!date) return;
+        
         const data = {
             act: {}, mood: {}, ach: {}, sat: {},
             notes: document.getElementById('extra_notes').value,
@@ -297,23 +320,44 @@
 
     function loadDayData() {
         const date = document.getElementById('currentDate').value;
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY + date) || 'null');
+        const savedRaw = localStorage.getItem(STORAGE_KEY + date);
+        
+        // Спочатку чистимо все
         hours.forEach(h => {
-            document.getElementById(`act_${h}`).value = saved?.act[h] || '';
-            document.getElementById(`dep_${h}`).value = saved?.mood[h]?.d || '';
-            document.getElementById(`anx_${h}`).value = saved?.mood[h]?.t || '';
-            document.getElementById(`ach_${h}`).value = saved?.ach[h] || '';
-            document.getElementById(`sat_${h}`).value = saved?.sat[h] || '';
+            document.getElementById(`act_${h}`).value = '';
+            document.getElementById(`dep_${h}`).value = '';
+            document.getElementById(`anx_${h}`).value = '';
+            document.getElementById(`ach_${h}`).value = '';
+            document.getElementById(`sat_${h}`).value = '';
             colorScore(document.getElementById(`ach_${h}`));
             colorScore(document.getElementById(`sat_${h}`));
         });
-        document.getElementById('extra_notes').value = saved?.notes || '';
-        document.getElementById('comp_1').value = saved?.comp[0] || '';
-        document.getElementById('comp_2').value = saved?.comp[1] || '';
-        document.getElementById('comp_3').value = saved?.comp[2] || '';
+        document.getElementById('extra_notes').value = '';
+        document.getElementById('comp_1').value = '';
+        document.getElementById('comp_2').value = '';
+        document.getElementById('comp_3').value = '';
+
+        if(!savedRaw) return;
+
+        const data = JSON.parse(savedRaw);
+        hours.forEach(h => {
+            if(data.act[h]) document.getElementById(`act_${h}`).value = data.act[h];
+            if(data.mood[h]) {
+                document.getElementById(`dep_${h}`).value = data.mood[h].d || '';
+                document.getElementById(`anx_${h}`).value = data.mood[h].t || '';
+            }
+            if(data.ach[h]) document.getElementById(`ach_${h}`).value = data.ach[h];
+            if(data.sat[h]) document.getElementById(`sat_${h}`).value = data.sat[h];
+            colorScore(document.getElementById(`ach_${h}`));
+            colorScore(document.getElementById(`sat_${h}`));
+        });
+        document.getElementById('extra_notes').value = data.notes || '';
+        document.getElementById('comp_1').value = data.comp[0] || '';
+        document.getElementById('comp_2').value = data.comp[1] || '';
+        document.getElementById('comp_3').value = data.comp[2] || '';
     }
 
-    // СПОВІЩЕННЯ
+    // --- КЕРУВАННЯ ---
     function enableNotifications() {
         Notification.requestPermission();
         localStorage.setItem('notifs_active', 'true');
@@ -322,7 +366,7 @@
             const now = new Date();
             if(now.getHours() >= 8 && now.getHours() <= 23 && now.getMinutes() === 0) {
                 triggerAlert();
-                new Notification("Моніторинг активностей 📝", { body: "Час заповнити дані за минулу годину!" });
+                new Notification("Моніторинг 📝", { body: "Час заповнити активність!" });
             }
         }, 60000);
         document.getElementById('notifStatus').className = "status-indicator status-on";
@@ -333,11 +377,10 @@
         clearInterval(timerId);
         localStorage.setItem('notifs_active', 'false');
         document.getElementById('notifStatus').className = "status-indicator status-off";
-        document.getElementById('notifStatus').innerText = "Нагадування: ВИМКНЕНО";
     }
 
     function sendTestNotification() {
-        alert("Зачекайте 3 секунди...");
+        alert("Зачекайте 3 сек...");
         setTimeout(() => { triggerAlert(); new Notification("Тест сирени ✅"); }, 3000);
     }
 
@@ -346,7 +389,7 @@
         loadDayData();
     }
 
-    // ПОВНИЙ ЕКСПОРТ У WORD
+    // --- WORD ЕКСПОРТ (ВИПРАВЛЕНО) ---
     async function exportToWord() {
         const start = new Date(document.getElementById('exportFrom').value);
         const end = new Date(document.getElementById('exportTo').value);
@@ -360,7 +403,7 @@
 
             const tableRows = [
                 new docx.TableRow({
-                    children: ["Час доби", "Активність", "Д/т", "досягнення", "задоволення"].map(h => 
+                    children: ["Час", "Активність", "Д/т", "Досяг.", "Зад."].map(h => 
                         new docx.TableCell({ children: [new docx.Paragraph({ text: h, bold: true })], shading: { fill: "F2F2F2" } })
                     )
                 })
@@ -378,40 +421,27 @@
                 }));
             });
 
-            const weekday = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'][new Date(dKey).getDay()];
             sections.push({
                 children: [
-                    new docx.Paragraph({ text: "БЛАНК моніторингу активностей", heading: docx.HeadingLevel.HEADING_1, alignment: docx.AlignmentType.CENTER }),
-                    new docx.Paragraph({ text: `День: ${dKey.split('-').reverse().join('.')} (${weekday})`, bold: true, spacing: { before: 200 } }),
+                    new docx.Paragraph({ text: "Звіт за " + dKey.split('-').reverse().join('.'), heading: docx.HeadingLevel.HEADING_1 }),
                     new docx.Table({ width: { size: 100, type: docx.WidthType.PERCENTAGE }, rows: tableRows }),
-                    new docx.Paragraph({ text: "Нотатки:", bold: true, spacing: { before: 200 } }),
-                    new docx.Paragraph(data.notes || "---"),
-                    new docx.Paragraph({ text: "Компліменти:", bold: true }),
-                    new docx.Paragraph(`1. ${data.comp[0] || ""}`),
-                    new docx.Paragraph(`2. ${data.comp[1] || ""}`),
-                    new docx.Paragraph(`3. ${data.comp[2] || ""}`),
+                    new docx.Paragraph({ text: "Нотатки: " + (data.notes || ""), spacing: { before: 200 } }),
+                    new docx.Paragraph({ text: "Компліменти: " + data.comp.join('; ') }),
                     new docx.Paragraph({ text: "", pageBreakBefore: true })
                 ]
             });
         }
 
-        if(sections.length === 0) return alert("Немає даних за цей період");
+        if(sections.length === 0) return alert("Немає даних");
 
         const doc = new docx.Document({ sections });
         docx.Packer.toBlob(doc).then(blob => {
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
-            a.download = `Report_${new Date().toLocaleDateString()}.docx`;
+            a.download = `Monitoring_Report.docx`;
             a.click();
         });
     }
-
-    // Автозаповнення дат при старті
-    const dInput = document.getElementById('currentDate');
-    const today = new Date().toISOString().split('T')[0];
-    dInput.value = today;
-    document.getElementById('exportFrom').value = today;
-    document.getElementById('exportTo').value = today;
 </script>
 
 </body>
