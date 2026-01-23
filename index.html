@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>БЛАНК моніторингу активностей FULL PRO</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/docx@7.1.0/build/index.js"></script>
+
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f1c40f;
+            --dark: #2c3e50;
+            --bg: #f0f2f5;
+            --border: #dcdde1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--dark);
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        h1 { text-align: center; color: var(--dark); font-size: 1.6rem; margin-bottom: 20px; }
+        h3 { margin-top: 0; border-left: 5px solid var(--primary); padding-left: 12px; font-size: 1.1rem; margin-bottom: 15px; }
+
+        .status-indicator {
+            text-align: center;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: 0.3s;
+        }
+        .status-on { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .status-off { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .btn:active { transform: scale(0.97); }
+        .btn-blue { background: var(--primary); }
+        .btn-green { background: var(--success); }
+        .btn-red { background: var(--danger); }
+        .btn-orange { background: var(--warning); color: #333; }
+        .btn-gray { background: #7f8c8d; }
+        .btn-test { background: #9b59b6; }
+
+        input[type="date"], input[type="number"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 15px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            min-width: 800px;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 12px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #636e72;
+            border-bottom: 2px solid var(--border);
+            text-align: center;
+        }
+
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+
+        .time-label { 
+            font-weight: bold; 
+            color: #7f8c8d; 
+            width: 110px; 
+            text-align: center; 
+            font-size: 0.85rem; 
+            background: #fafafa;
+        }
+
+        textarea.activity-box {
+            height: 45px;
+            resize: vertical;
+            background: #ffffff;
+            border: 1px solid #eee;
+            font-size: 0.9rem;
+        }
+
+        .num-input {
+            width: 55px;
+            height: 40px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .dt-cell { display: flex; gap: 5px; justify-content: center; }
+
+        .extra-section { margin-top: 20px; }
+        .extra-section label { font-weight: bold; display: block; margin-bottom: 8px; }
+        
+        .comp-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+        .comp-row b { color: var(--success); font-size: 1.3rem; margin-top: 5px; }
+
+        .legend {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 15px;
+            text-align: center;
+            font-style: italic;
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 8px; }
+            .control-grid { grid-template-columns: 1fr; }
+            th { font-size: 0.65rem; padding: 8px 2px; }
+            .num-input { width: 42px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📝 БЛАНК моніторингу активностей</h1>
+
+    <div class="card">
+        <div id="notifStatus" class="status-indicator status-off">Нагадування: ВИМКНЕНО</div>
+        
+        <div class="control-grid">
+            <div style="grid-column: span 2;">
+                <label style="font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; display: block;">Дата заповнення:</label>
+                <input type="date" id="currentDate" onchange="loadDayData()">
+            </div>
+            <button class="btn btn-gray" onclick="askPermission()">🔑 Дозволити доступ</button>
+            <button class="btn btn-test" onclick="sendTestNotification()">🧪 Тест (+Довгий сигнал)</button>
+            <button class="btn btn-orange" onclick="enableNotifications()">▶ Увімкнути щогодини</button>
+            <button class="btn btn-red" onclick="disableNotifications()">⏹ Вимкнути все</button>
+            <button class="btn btn-blue" onclick="setToday()" style="grid-column: span 2;">📅 Перейти на Сьогодні</button>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="legend">0-10 (Д-депресія, пригнічення), Т-тривога. 0 - відсутність, 10 - макс. виражено</div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Час доби</th>
+                        <th>Активність</th>
+                        <th>Д/Т (0-10)</th>
+                        <th>Досягнення</th>
+                        <th>Задоволення</th>
+                    </tr>
+                </thead>
+                <tbody id="mainTableBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>💡 Думки та компліменти</h3>
+        <div class="extra-section">
+            <label>Розминка перед сном / Думки про майбутнє:</label>
+            <textarea id="extra_notes" oninput="saveCurrentData()" placeholder="Запишіть ваші роздуми..." style="min-height: 100px; margin-bottom: 20px;"></textarea>
+            
+            <label>3 компліменти собі за цей день:</label>
+            <div class="comp-row"><b>1.</b> <textarea id="comp_1" oninput="saveCurrentData()" placeholder="1."></textarea></div>
+            <div class="comp-row"><b>2.</b> <textarea id="comp_2" oninput="saveCurrentData()" placeholder="2."></textarea></div>
+            <div class="comp-row"><b>3.</b> <textarea id="comp_3" oninput="saveCurrentData()" placeholder="3."></textarea></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📊 Експорт у Word</h3>
+        <div class="control-grid">
+            <input type="date" id="exportFrom">
+            <input type="date" id="exportTo">
+            <button class="btn btn-blue" style="grid-column: span 2;" onclick="exportToWord()">📄 Завантажити Word (.docx)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const hours = ["04.00-05.00", "05.00-06.00", "06.00-07.00", "07.00-08.00", "08.00-09.00", "09.00-10.00", "10.00-11.00", "11.00-12.00", "12.00-13.00", "13.00-14.00", "14.00-15.00", "15.00-16.00", "16.00-17.00", "17.00-18.00", "18.00-19.00", "19.00-20.00", "20.00-21.00", "21.00-22.00", "22.00-23.00", "23.00-24.00", "24.00-01.00", "01.00-02.00", "02.00-03.00", "03.00-04.00"];
+
+    let timerId = null;
+    let wakeLock = null;
+
+    window.onload = () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('currentDate').value = today;
+        document.getElementById('exportFrom').value = today;
+        document.getElementById('exportTo').value = today;
+        renderTableRows();
+        loadDayData();
+        if(localStorage.getItem('notifs_active') === 'true') enableNotifications(true);
+    };
+
+    function renderTableRows() {
+        const body = document.getElementById('mainTableBody');
+        body.innerHTML = hours.map(h => `
+            <tr>
+                <td class="time-label">${h}</td>
+                <td><textarea id="act_${h}" class="activity-box" oninput="saveCurrentData()"></textarea></td>
+                <td><div class="dt-cell">
+                    <input type="number" id="dep_${h}" class="num-input" placeholder="Д" min="0" max="10" oninput="saveCurrentData()">
+                    <input type="number" id="anx_${h}" class="num-input" placeholder="Т" min="0" max="10" oninput="saveCurrentData()">
+                </div></td>
+                <td><input type="number" id="ach_${h}" class="num-input" min="0" max="10" oninput="saveCurrentData()" onchange="colorScore(this)"></td>
+                <td><input type="number" id="sat_${h}" class="num-input" min="0" max="10" oninput="saveCurrentData()" onchange="colorScore(this)"></td>
+            </tr>`).join('');
+    }
+
+    function colorScore(el) {
+        const v = parseInt(el.value);
+        if(isNaN(v)) { el.style.backgroundColor = 'white'; return; }
+        el.style.backgroundColor = `hsla(${v * 12}, 70%, 92%, 1)`;
+    }
+
+    // --- ПОКРАЩЕНИЙ ЗВУК ТА ВІБРАЦІЯ ---
+    function triggerAlert() {
+        if ("vibrate" in navigator) navigator.vibrate([300, 200, 300, 200, 500]);
+        
+        try {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const playTone = (time, duration) => {
+                const osc = context.createOscillator();
+                const gain = context.createGain();
+                osc.connect(gain); gain.connect(context.destination);
+                osc.type = "sine"; 
+                osc.frequency.setValueAtTime(880, time); 
+                gain.gain.setValueAtTime(0.1, time);
+                gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
+                osc.start(time);
+                osc.stop(time + duration);
+            };
+
+            // Три послідовні сигнали
+            const now = context.currentTime;
+            playTone(now, 1.0);
+            playTone(now + 0.7, 0.5);
+            playTone(now + 1.4, 0.8);
+        } catch(e) {}
+    }
+
+    // --- ЛОГІКА СПОВІЩЕНЬ ---
+    function askPermission() {
+        Notification.requestPermission().then(p => { if(p === 'granted') alert("✅ Дозвіл отримано!"); });
+    }
+
+    function sendTestNotification() {
+        if (Notification.permission !== 'granted') return alert("Спочатку дайте дозвіл");
+        alert("Зачекайте 5 сек. і згорніть браузер...");
+        setTimeout(() => {
+            triggerAlert();
+            new Notification("Тест моніторингу ✅", { body: "Довгий ритмічний сигнал спрацював!", icon: "https://cdn-icons-png.flaticon.com/512/3652/3652191.png" });
+        }, 5000);
+    }
+
+    async function enableNotifications(isAuto = false) {
+        if(Notification.permission !== 'granted' && !isAuto) return alert("Дайте дозвіл!");
+        
+        disableNotifications();
+        localStorage.setItem('notifs_active', 'true');
+        
+        if ('wakeLock' in navigator) {
+            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+        }
+
+        timerId = setInterval(() => {
+            const now = new Date();
+            if(now.getHours() >= 8 && now.getHours() <= 23 && now.getMinutes() === 0) {
+                triggerAlert();
+                new Notification("Моніторинг активностей 📝", { body: "Час заповнити дані за минулу годину!" });
+            }
+        }, 60000);
+
+        document.getElementById('notifStatus').className = "status-indicator status-on";
+        document.getElementById('notifStatus').innerText = "Нагадування: АКТИВНІ (08:00 - 23:00)";
+    }
+
+    function disableNotifications() {
+        if(timerId) clearInterval(timerId);
+        if(wakeLock) { wakeLock.release(); wakeLock = null; }
+        localStorage.setItem('notifs_active', 'false');
+        document.getElementById('notifStatus').className = "status-indicator status-off";
+        document.getElementById('notifStatus').innerText = "Нагадування: ВИМКНЕНО";
+    }
+
+    function setToday() {
+        document.getElementById('currentDate').value = new Date().toISOString().split('T')[0];
+        loadDayData();
+    }
+
+    function saveCurrentData() {
+        const date = document.getElementById('currentDate').value;
+        const data = {
+            activities: {}, mood: {}, achievement: {}, satisfaction: {},
+            notes: document.getElementById('extra_notes').value,
+            compliments: [document.getElementById('comp_1').value, document.getElementById('comp_2').value, document.getElementById('comp_3').value]
+        };
+        hours.forEach(h => {
+            data.activities[h] = document.getElementById(`act_${h}`).value;
+            data.mood[h] = { d: document.getElementById(`dep_${h}`).value, t: document.getElementById(`anx_${h}`).value };
+            data.achievement[h] = document.getElementById(`ach_${h}`).value;
+            data.satisfaction[h] = document.getElementById(`sat_${h}`).value;
+        });
+        localStorage.setItem('kpt_v52_final_' + date, JSON.stringify(data));
+    }
+
+    function loadDayData() {
+        const date = document.getElementById('currentDate').value;
+        const saved = JSON.parse(localStorage.getItem('kpt_v52_final_' + date) || 'null');
+        hours.forEach(h => {
+            document.getElementById(`act_${h}`).value = saved?.activities[h] || '';
+            document.getElementById(`dep_${h}`).value = saved?.mood[h]?.d || '';
+            document.getElementById(`anx_${h}`).value = saved?.mood[h]?.t || '';
+            document.getElementById(`ach_${h}`).value = saved?.achievement[h] || '';
+            document.getElementById(`sat_${h}`).value = saved?.satisfaction[h] || '';
+            colorScore(document.getElementById(`ach_${h}`));
+            colorScore(document.getElementById(`sat_${h}`));
+        });
+        document.getElementById('extra_notes').value = saved?.notes || '';
+        document.getElementById('comp_1').value = saved?.compliments[0] || '';
+        document.getElementById('comp_2').value = saved?.compliments[1] || '';
+        document.getElementById('comp_3').value = saved?.compliments[2] || '';
+    }
+
+    async function exportToWord() {
+        const start = new Date(document.getElementById('exportFrom').value);
+        const end = new Date(document.getElementById('exportTo').value);
+        const sections = [];
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dKey = d.toISOString().split('T')[0];
+            const raw = localStorage.getItem('kpt_v52_final_' + dKey);
+            if(!raw) continue;
+            const data = JSON.parse(raw);
+            const tableRows = [new docx.TableRow({ children: ["Час доби", "Активність", "Д/т", "досягнення", "задоволення"].map(h => new docx.TableCell({ children: [new docx.Paragraph({ text: h, bold: true, alignment: docx.AlignmentType.CENTER })], shading: { fill: "F2F2F2" } })) })];
+            hours.forEach(h => {
+                tableRows.push(new docx.TableRow({ children: [new docx.TableCell({ children: [new docx.Paragraph({ text: h, alignment: docx.AlignmentType.CENTER })] }), new docx.TableCell({ children: [new docx.Paragraph(data.activities[h] || "")] }), new docx.TableCell({ children: [new docx.Paragraph({ text: `${data.mood[h].d || ""}/${data.mood[h].t || ""}`, alignment: docx.AlignmentType.CENTER })] }), new docx.TableCell({ children: [new docx.Paragraph({ text: data.achievement[h] || "", alignment: docx.AlignmentType.CENTER })] }), new docx.TableCell({ children: [new docx.Paragraph({ text: data.satisfaction[h] || "", alignment: docx.AlignmentType.CENTER })] })] }));
+            });
+            const weekday = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'][new Date(dKey).getDay()];
+            sections.push({ children: [new docx.Paragraph({ text: "БЛАНК моніторингу активностей", heading: docx.HeadingLevel.HEADING_1, alignment: docx.AlignmentType.CENTER }), new docx.Paragraph({ text: `День: ${dKey.split('-').reverse().join('.')} (${weekday})`, bold: true }), new docx.Table({ width: { size: 100, type: docx.WidthType.PERCENTAGE }, rows: tableRows }), new docx.Paragraph({ text: "Нотатки:", bold: true }), new docx.Paragraph(data.notes || "---"), new docx.Paragraph({ text: "Компліменти:", bold: true }), new docx.Paragraph(`1. ${data.comp[0]}`), new docx.Paragraph(`2. ${data.comp[1]}`), new docx.Paragraph(`3. ${data.comp[2]}`), new docx.Paragraph({ text: "", pageBreakBefore: true })] });
+        }
+        const doc = new docx.Document({ sections });
+        docx.Packer.toBlob(doc).then(blob => {
+            const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+            a.download = `Monitoring_Report.docx`; a.click();
+        });
+    }
+</script>
+</body>
+</html>
